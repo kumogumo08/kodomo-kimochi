@@ -1,0 +1,15 @@
+{
+  "label": "いま見る子ども: {{name}}",
+  "defaultName": "子ども1",
+  "addChip": "＋ 子どもを追加",
+  "hint": "長押しで名前変更 / 最大{{max}}人",
+  "renameModalTitle": "子どもの名前を編集",
+  "placeholderName": "例: みお",
+  "cancel": "キャンセル",
+  "save": "保存",
+  "delete": "削除",
+  "chipA11y": "子どもの名前",
+  "chipA11ySelected": "子どもの名前（変更）",
+  "deleteChildA11y": "この子どもを削除"
+}
+

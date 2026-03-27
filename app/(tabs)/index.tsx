@@ -1,98 +1,310 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import type { Emotion } from '@/constants/emotions';
+import { getEmotions } from '@/constants/emotions';
+import { ChildNameChips } from '@/components/ChildNameChips';
+import { useChild } from '@/contexts/ChildContext';
+import { usePremium } from '@/contexts/PremiumContext';
+import { addEmotionToHistory } from '@/lib/emotion-history';
+
+const SCREEN_BG = '#FFF8F0';
+const LABEL_COLOR = '#1a1a1a';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const { effectivePremium } = usePremium();
+  const { children, selectedChildId, selectedChild, selectChild, updateChildName } = useChild();
+  const { t } = useTranslation();
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const emotionsForLang = getEmotions();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const selectedIndex = useMemo(
+    () => children.findIndex((child) => child.id === selectedChildId),
+    [children, selectedChildId]
+  );
+
+  const handleSwipe = async (translationX: number) => {
+    if (!effectivePremium) return;
+    if (children.length <= 1) return;
+    if (selectedIndex < 0) return;
+
+    const threshold = 36;
+    if (translationX <= -threshold && selectedIndex < children.length - 1) {
+      await selectChild(children[selectedIndex + 1].id);
+      return;
+    }
+    if (translationX >= threshold && selectedIndex > 0) {
+      await selectChild(children[selectedIndex - 1].id);
+    }
+  };
+
+  const openRename = () => {
+    setNameDraft(selectedChild?.name ?? t('childSwitcher.defaultName'));
+    setEditingName(true);
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <PanGestureHandler
+        enabled={effectivePremium && !editingName && children.length > 1}
+        onEnded={async (event: any) => {
+          await handleSwipe(event.nativeEvent.translationX);
+        }}
+        // 縦スクロールとの干渉を抑える（横だけ動いたときに有効化）
+        activeOffsetX={[-12, 12]}
+        failOffsetY={[-10, 10]}>
+        <View style={styles.gestureWrap}>
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}>
+            <View style={styles.header}>
+            <View style={styles.subtitleWrap}>
+              <Text style={styles.subtitle}>
+                {t('home.subtitle')}
+              </Text>
+            </View>
+
+              <ChildNameChips
+                childrenList={children}
+                selectedChild={selectedChild}
+                selectedChildId={selectedChildId}
+                effectivePremium={effectivePremium}
+                selectChild={selectChild}
+                onLongPressSelected={openRename}
+              />
+            </View>
+
+            <View style={styles.grid}>
+              {emotionsForLang.map((emotion) => (
+                <EmotionCard
+                  key={emotion.id}
+                  emotion={emotion}
+                  onPress={async () => {
+                    try {
+                      await addEmotionToHistory(
+                        {
+                          emotionId: emotion.id,
+                          label: emotion.label,
+                          selectedAt: new Date().toISOString(),
+                        },
+                        selectedChildId
+                      );
+                    } catch {
+                      // 保存に失敗しても詳細へ遷移する
+                    }
+                    router.push({ pathname: '/emotion/[id]', params: { id: emotion.id } });
+                  }}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      </PanGestureHandler>
+
+      <Modal
+        transparent
+        visible={editingName}
+        animationType="fade"
+        onRequestClose={() => setEditingName(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setEditingName(false)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>{t('home.renameModalTitle')}</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              maxLength={20}
+              placeholder={t('home.placeholderName')}
+              placeholderTextColor="#9CA3AF"
+            />
+            <View style={styles.modalActions}>
+              <Pressable onPress={() => setEditingName(false)}>
+                <Text style={styles.modalCancel}>{t('home.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  if (!selectedChild) return;
+                  await updateChildName(selectedChild.id, nameDraft);
+                  setEditingName(false);
+                }}
+              >
+                <Text style={styles.modalSave}>{t('home.save')}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
+function EmotionCard({
+  emotion,
+  onPress,
+}: {
+  emotion: Emotion;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.card,
+        { borderColor: emotion.bgColor },
+        pressed && styles.cardPressed,
+      ]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={emotion.label}>
+      <View style={styles.imageWrap}>
+        <Image
+          source={emotion.image}
+          style={styles.cardImage}
+          contentFit="contain"
+        />
+      </View>
+      <Text style={styles.cardLabel}>{emotion.label}</Text>
+    </Pressable>
+  );
+}
+
+const CARD_GAP = 12;
+const COLS = 2;
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  safeArea: {
+    flex: 1,
+    backgroundColor: SCREEN_BG,
+  },
+  gestureWrap: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 32,
+  },
+  header: {
     alignItems: 'center',
-    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginBottom: 3,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  subtitle: {
+    fontSize: 17,
+    color: '#7A5C43',
+    lineHeight: 24,
+    textAlign: 'center',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitleWrap: {
+    backgroundColor: '#FFF4E8',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#F3D9C3',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -CARD_GAP / 2,
+  },
+  card: {
+    width: `${100 / COLS}%`,
+    paddingHorizontal: CARD_GAP / 2,
+    paddingBottom: CARD_GAP,
+    minHeight: 200,
+    borderRadius: 16,
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+  },
+  cardPressed: {
+    opacity: 0.92,
+  },
+  imageWrap: {
+    width: '100%',
+    aspectRatio: 1,
+    maxHeight: 162,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#FAFAFA',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  cardLabel: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: LABEL_COLOR,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 10,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.12)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#111827',
+  },
+  modalActions: {
+    marginTop: 14,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 16,
+  },
+  modalCancel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  modalSave: {
+    fontSize: 14,
+    color: '#0a7ea4',
+    fontWeight: '700',
   },
 });

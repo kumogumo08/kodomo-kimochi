@@ -1,0 +1,11 @@
+{
+  "prevMonthA11y": "Show previous month",
+  "nextMonthA11y": "Show next month",
+  "weekdays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  "monthLabel": "{{year}} {{month}}",
+  "dateLabel": "{{year}}/{{month}}/{{day}}",
+  "modalClose": "Close",
+  "emptyDay": "There are no records for this day.",
+  "memoLabel": "Memo:"
+}
+

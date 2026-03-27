@@ -2,8 +2,13 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ChildProvider } from '@/contexts/ChildContext';
+import { PremiumProvider } from '@/contexts/PremiumContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTranslation } from 'react-i18next';
+import '@/lib/i18n';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -11,14 +16,41 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const { t } = useTranslation();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PremiumProvider>
+        <ChildProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen
+                name="(tabs)"
+                options={{
+                  headerShown: false,
+                  title: t('tabs.home'),
+                }}
+              />
+
+              <Stack.Screen
+                name="emotion/[id]"
+                options={{
+                  title: '',
+                  headerBackButtonDisplayMode: 'minimal',
+                }}
+              />
+              <Stack.Screen
+                name="premium"
+                options={{
+                  headerBackButtonDisplayMode: 'minimal',
+                }}
+              />
+            </Stack>
+
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </ChildProvider>
+      </PremiumProvider>
+    </GestureHandlerRootView>
   );
 }

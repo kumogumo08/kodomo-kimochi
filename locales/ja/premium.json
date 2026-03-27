@@ -1,0 +1,24 @@
+{
+  "title": "プレミアム機能",
+  "descriptionIntro": "お子さまの気持ちを、より深く理解できるようになります。",
+  
+  "featureCalendarTitle": "感情カレンダーの全履歴（2週間制限なし）",
+  "featureCalendarBody": "いつ・どんなときにどんな気持ちになったのか、過去までさかのぼって確認できます",
+
+  "featureReportTitle": "感情レポート分析",
+  "featureReportBody": "怒りや不安が多い時期など、感情の傾向を分かりやすく把握できます",
+
+  "featureSiblingTitle": "複数の子どもをまとめて管理",
+  "featureSiblingBody": "兄弟それぞれの気持ちを個別に記録・比較できます",
+
+  "featureMemoTitle": "メモ機能",
+  "featureMemoBody": "「なぜその気持ちになったのか」を記録でき、あとから原因やパターンに気づけます",
+
+  "priceLoading": "価格を確認中",
+  "priceUnavailable": "価格を確認できませんでした",
+  "priceNote": "一度の購入で、すべての機能がずっと使えます",
+  
+  "buyButton": "プレミアムを購入する",
+  "restoreButton": "購入を復元",
+  "purchased": "プレミアム購入済み"
+}

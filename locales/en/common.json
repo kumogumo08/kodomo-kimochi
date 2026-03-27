@@ -1,0 +1,9 @@
+{
+  "loading": "Loading...",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "deleteConfirmTitle": "Delete this item?",
+  "deleteConfirmBody": "This item will be deleted. Are you sure?"
+}
+

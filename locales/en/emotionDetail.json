@@ -1,0 +1,36 @@
+{
+  "notFound": "We couldn’t find that emotion.",
+  "back": "← Back",
+  "actionBoxLabel": "What to do now",
+  "done": "You did it!",
+  "again": "Try again",
+  "accordion": {
+    "calmTitle": "Ways to calm down",
+    "parentTitle": "Helpful points for parents",
+    "wordsTitle": "Examples of what to say"
+  },
+  "successMessages": [
+    "Great job!✨",
+    "Well done!🎉",
+    "You tried hard!👏",
+    "Nice!🌟",
+    "Awesome!⭐️",
+    "You’re doing great!✨",
+    "Perfect!👍",
+    "So good!🌈",
+    "That was wonderful!👏",
+    "Amazing work!🎊",
+    "You gave it a try!✨",
+    "Nice and calm!👏",
+    "You could say your feelings!⭐️",
+    "Great challenge!👏",
+    "Good job being patient!✨",
+    "Kind and caring!🌈",
+    "You did it!👏",
+    "Excellent!⭐️",
+    "So awesome!✨",
+    "Perfect!🌟",
+    "Super!✨🎉"
+  ]
+}
+

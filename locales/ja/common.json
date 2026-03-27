@@ -1,0 +1,9 @@
+{
+  "loading": "読み込み中...",
+  "cancel": "キャンセル",
+  "save": "保存",
+  "delete": "削除",
+  "deleteConfirmTitle": "削除しますか？",
+  "deleteConfirmBody": "この項目は削除されます。よろしいですか？"
+}
+

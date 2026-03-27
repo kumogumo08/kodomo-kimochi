@@ -1,0 +1,74 @@
+{
+  "title": "History",
+  "swipeSwitchHint": "Swipe left or right to switch",
+  "empty": "No history yet",
+  "today": "Today",
+  "pastTitle": "Past",
+  "recentTitle": "Recent",
+  "calendarTitle": "Emotion Calendar",
+  "reportTitle": "Emotion Report",
+  "calendarPremiumDescription": "Revisit the flow of emotions in a calendar view each month.",
+  "reportPremiumDescription": "Weekly reports, custom date range reports, emotion graphs, and memo features are available.",
+  "period": {
+    "thisWeek": "This week",
+    "lastWeek": "Last week",
+    "thisMonth": "This month",
+    "lastMonth": "Last month"
+  },
+  "dateCount": "{{date}}: {{count}} item(s)",
+  "summaryExpandA11y": "{{date}}: {{count}} item(s). Tap to expand",
+  "summaryText": "{{date}}: {{count}} item(s)",
+  "rangeButton": "Custom range",
+  "rangeButtonA11y": "View report for custom range",
+  "rangeSummary": "Range: {{start}}〜{{end}}",
+  "startDate": "Start date",
+  "startDateA11y": "Select start date",
+  "endDate": "End date",
+  "endDateA11y": "Select end date",
+  "search": "Search",
+  "clear": "Clear",
+  "notSelected": "Not selected",
+  "rangeErrorSelectBoth": "Please choose both the start and end dates.",
+  "rangeErrorOrder": "Please choose a start date earlier than the end date.",
+  "reportEmpty": "No report yet",
+  "reportErrorData": "Could not load report data",
+  "reportEmptyForPeriod": "No report for this period",
+  "sectionCollapseA11y": "{{title}}. Tap to close",
+  "memo": "Memo",
+  "memoEdit": "Edit memo",
+  "memoPlaceholder": "Memo for this moment (up to 50 characters)",
+  "memoCancel": "Cancel",
+  "memoSave": "Save",
+  "deleteAction": "Delete",
+  "deleteConfirmTitle": "Do you want to delete this history?",
+  "deleteConfirmButton": "Delete",
+  "rangeSearchButtonA11y": "Show report for this period",
+  "rangeClearA11y": "Clear custom range",
+  "countItems": "{{count}} item(s)",
+  "chosenCount": "{{count}} time(s)",
+  "chart": {
+    "chosenTimesTitle": "{{periodLabel}} chosen times",
+    "chosenTimes": "{{count}} time(s)",
+    "emotionRatioTitle": "{{periodLabel}} emotion distribution",
+    "emotionCategoryBreakdownTitle": "Emotion categories",
+    "highLowTitle": "High energy / Calm",
+    "pleasantUnpleasantTitle": "Pleasant / Unpleasant"
+  },
+  "noRecordsForPeriod": "There are no records for this period.",
+  "comparisonPlus": "(vs {{previous}} +{{diff}})",
+  "comparisonMinus": "(vs {{previous}} {{diff}})",
+  "emotionCategoryLabels": {
+    "positive": "Positive group",
+    "anger": "Anger group",
+    "sadness": "Sadness group"
+  },
+  "highLowLabels": {
+    "high": "High energy",
+    "low": "Calm"
+  },
+  "pleasantUnpleasantLabels": {
+    "pleasant": "Pleasant",
+    "unpleasant": "Unpleasant"
+  }
+}
+

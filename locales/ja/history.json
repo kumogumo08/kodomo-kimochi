@@ -1,0 +1,74 @@
+{
+  "title": "履歴",
+  "swipeSwitchHint": "左右にスワイプで切り替え",
+  "empty": "まだ履歴はありません",
+  "today": "今日",
+  "pastTitle": "過去",
+  "recentTitle": "最近",
+  "calendarTitle": "感情カレンダー",
+  "reportTitle": "感情レポート",
+  "calendarPremiumDescription": "月ごとの感情の流れをカレンダーで見返せます。",
+  "reportPremiumDescription": "週レポート・期間指定レポート・感情グラフ・メモ機能が使えます。",
+  "period": {
+    "thisWeek": "今週",
+    "lastWeek": "先週",
+    "thisMonth": "今月",
+    "lastMonth": "先月"
+  },
+  "dateCount": "{{date}} {{count}}件",
+  "summaryExpandA11y": "{{date}} {{count}}件、タップで展開",
+  "summaryText": "{{date}} {{count}}件",
+  "rangeButton": "期間指定",
+  "rangeButtonA11y": "期間指定でレポートを見る",
+  "rangeSummary": "対象期間: {{start}}〜{{end}}",
+  "startDate": "開始日",
+  "startDateA11y": "開始日を選択",
+  "endDate": "終了日",
+  "endDateA11y": "終了日を選択",
+  "search": "検索",
+  "clear": "クリア",
+  "notSelected": "未選択",
+  "rangeErrorSelectBoth": "開始日と終了日を選択してください。",
+  "rangeErrorOrder": "開始日は終了日より前の日付を選んでください。",
+  "reportEmpty": "まだレポートはありません",
+  "reportErrorData": "レポートデータを表示できませんでした",
+  "reportEmptyForPeriod": "この期間のレポートはありません",
+  "sectionCollapseA11y": "{{title}}、タップで閉じる",
+  "memo": "メモ",
+  "memoEdit": "メモ編集",
+  "memoPlaceholder": "このときのメモ（50文字まで）",
+  "memoCancel": "キャンセル",
+  "memoSave": "保存",
+  "deleteAction": "削除",
+  "deleteConfirmTitle": "この履歴を削除しますか？",
+  "deleteConfirmButton": "削除する",
+  "rangeSearchButtonA11y": "この期間でレポートを表示",
+  "rangeClearA11y": "期間指定を解除",
+  "countItems": "{{count}}件",
+  "chosenCount": "{{count}}回",
+  "chart": {
+    "chosenTimesTitle": "{{periodLabel}}の選んだ回数",
+    "chosenTimes": "{{count}}回",
+    "emotionRatioTitle": "{{periodLabel}}の感情ごとの割合",
+    "emotionCategoryBreakdownTitle": "感情カテゴリ別",
+    "highLowTitle": "高ぶり / 落ち着き",
+    "pleasantUnpleasantTitle": "快 / 不快"
+  },
+  "noRecordsForPeriod": "この期間の記録はありません。",
+  "comparisonPlus": "（{{previous}}比 +{{diff}}）",
+  "comparisonMinus": "（{{previous}}比 {{diff}}）",
+  "emotionCategoryLabels": {
+    "positive": "ポジティブ系",
+    "anger": "怒り系",
+    "sadness": "悲しみ系"
+  },
+  "highLowLabels": {
+    "high": "高ぶり寄り",
+    "low": "落ち着き寄り"
+  },
+  "pleasantUnpleasantLabels": {
+    "pleasant": "快",
+    "unpleasant": "不快"
+  }
+}
+

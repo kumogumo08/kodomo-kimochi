@@ -1,0 +1,15 @@
+{
+  "label": "Now viewing: {{name}}",
+  "defaultName": "Child 1",
+  "addChip": "+ Add child",
+  "hint": "Long-press to edit names / Up to {{max}} children",
+  "renameModalTitle": "Edit child's name",
+  "placeholderName": "e.g. Mio",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "chipA11y": "Child's name",
+  "chipA11ySelected": "Child's name (edit)",
+  "deleteChildA11y": "Delete this child"
+}
+

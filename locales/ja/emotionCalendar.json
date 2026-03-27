@@ -1,0 +1,11 @@
+{
+  "prevMonthA11y": "前の月を表示",
+  "nextMonthA11y": "次の月を表示",
+  "weekdays": ["日", "月", "火", "水", "木", "金", "土"],
+  "monthLabel": "{{year}}年 {{month}}月",
+  "dateLabel": "{{year}}年{{month}}月{{day}}日",
+  "modalClose": "閉じる",
+  "emptyDay": "この日の記録はありません。",
+  "memoLabel": "メモ:"
+}
+

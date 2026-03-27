@@ -1,0 +1,24 @@
+{
+  "title": "Unlock Premium",
+  "descriptionIntro": "Understand your child’s emotions more deeply and support them better.",
+
+  "featureCalendarTitle": "Full emotion history (no 2-week limit)",
+  "featureCalendarBody": "Look back and see when and why emotions happened",
+
+  "featureReportTitle": "Emotion insights and trends",
+  "featureReportBody": "Understand patterns like frequent anger or anxiety",
+
+  "featureSiblingTitle": "Manage multiple children",
+  "featureSiblingBody": "Track and compare each child’s emotions separately",
+
+  "featureMemoTitle": "Memo feature",
+  "featureMemoBody": "Record what caused each emotion and discover patterns over time",
+
+  "priceLoading": "Checking price...",
+  "priceUnavailable": "Could not load the price",
+  "priceNote": "Pay once and unlock all features forever",
+
+  "buyButton": "Unlock Premium",
+  "restoreButton": "Restore Purchase",
+  "purchased": "Premium Unlocked"
+}
