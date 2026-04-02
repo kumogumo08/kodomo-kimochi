@@ -111,7 +111,16 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
       setLocalizedPriceText(pricing.localizedPriceText);
       return purchased || refreshed;
     } catch (err) {
-      setLastPremiumError(err as BillingError);
+      const code =
+        err && typeof err === 'object' && 'code' in err
+          ? (err as BillingError).code
+          : undefined;
+      // ユーザーがストアの購入 sheet を閉じただけのときはエラー扱いにしない（赤表示を避ける）
+      if (code === 'user_cancelled') {
+        setLastPremiumError(null);
+      } else {
+        setLastPremiumError(err as BillingError);
+      }
       return false;
     } finally {
       setIsLoadingPremium(false);
@@ -171,6 +180,9 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
       isPremium,
       isLoadingPremium,
       lastPremiumError,
+      currentOffering,
+      currentPackage,
+      localizedPriceText,
       purchasePremium,
       restorePremium,
       refreshPremiumStatus,

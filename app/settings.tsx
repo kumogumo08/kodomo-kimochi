@@ -27,6 +27,8 @@ import {
 import { useTranslation } from 'react-i18next';
 
 const ACCENT = '#0a7ea4';
+const TERMS_URL = 'https://procom.jp/kodomo-kimochi/terms';
+const LAW_URL = 'https://procom.jp/kodomo-kimochi/law';
 
 function toTimeLabel(hour: number, minute: number): string {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
@@ -144,6 +146,17 @@ export default function SettingsScreen() {
       );
     }
   }, [t]);
+
+  const handleOpenExternalLink = useCallback(
+    async (url: string) => {
+      try {
+        await Linking.openURL(url);
+      } catch {
+        Alert.alert('リンクを開けませんでした');
+      }
+    },
+    []
+  );
 
   const handleAddNotification = useCallback(async () => {
     if (!canAddNotification) return;
@@ -263,7 +276,7 @@ export default function SettingsScreen() {
             <Text style={styles.body}>{t('settings.referenceConceptsBody')}</Text>
           </View>         
 
-         {/* 4. 言語 */}
+         {/* 5. 言語 */}
           <View style={styles.card}>
             <Text style={styles.sectionHeading}>{t('settings.languageHeading')}</Text>
             <View style={styles.languageRow}>
@@ -305,7 +318,7 @@ export default function SettingsScreen() {
             </View>
           </View> 
 
-          {/* 5. 通知設定 */}
+          {/* 6. 通知設定 */}
           <View style={styles.card}>
             <Text style={styles.sectionHeading}>{t('settings.notifications.title')}</Text>
             <Text style={styles.body}>{t('settings.notifications.description')}</Text>
@@ -445,7 +458,7 @@ export default function SettingsScreen() {
             />
           ) : null}
 
-          {/* 6. プレミアム機能（区切り見出し） */}
+          {/* 7. プレミアム機能（区切り見出し） */}
           <View style={styles.premiumSeparator}>
             <View style={styles.premiumSeparatorLine} />
             <View style={styles.premiumSeparatorLabelWrap}>
@@ -480,7 +493,7 @@ export default function SettingsScreen() {
             ) : null}
           </View>
 
-          {/* 7. 子どもの管理 */}
+          {/* 8. 子どもの管理 */}
           <View style={styles.card}>
             <Text style={styles.sectionHeading}>{t('settings.childManagerTitle')}</Text>
             <Text style={styles.body}>{t('settings.childManagerBody')}</Text>
@@ -492,13 +505,13 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          {/* 8. 感情レポートの見方 */}
+          {/* 9. 感情レポートの見方 */}
           <View style={styles.card}>
             <Text style={styles.sectionHeading}>{t('settings.emotionReportTitle')}</Text>
             <Text style={styles.body}>{t('settings.emotionReportBody')}</Text>
           </View>
 
-          {/* 9. 感情カテゴリについて */}
+          {/* 10. 感情カテゴリについて */}
           <View style={styles.card}>
             <Text style={styles.sectionHeading}>{t('settings.emotionCategoriesTitle')}</Text>
             <Text style={styles.body}>{t('settings.emotionCategoriesBody')}</Text>
@@ -508,6 +521,27 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionHeading}>{t('settings.memoFeatureTitle')}</Text>
             <Text style={styles.body}>{t('settings.memoFeatureBody')}</Text>
+          </View>
+
+          {/* 11. 規約・法的表記 */}
+          <View style={styles.card}>
+            <Text style={styles.sectionHeading}>{t('settings.legalSectionTitle')}</Text>
+            <Pressable
+              style={styles.legalLinkRow}
+              onPress={() => void handleOpenExternalLink(TERMS_URL)}
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.termsA11y')}
+            >
+              <Text style={styles.legalLinkText}>{t('settings.terms')}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.legalLinkRow}
+              onPress={() => void handleOpenExternalLink(LAW_URL)}
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.lawA11y')}
+            >
+              <Text style={styles.legalLinkText}>{t('settings.law')}</Text>
+            </Pressable>
           </View>
 
           {__DEV__ ? (
@@ -822,6 +856,16 @@ function createStyles(isDark: boolean) {
   notificationAddButtonText: {
     fontSize: 14,
     fontWeight: '700',
+    color: ACCENT,
+  },
+  legalLinkRow: {
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+  },
+  legalLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: ACCENT,
   },
   languageRow: {

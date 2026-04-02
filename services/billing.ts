@@ -10,13 +10,45 @@ export const BILLING_ENTITLEMENT_ID = 'premium';
 export const BILLING_OFFERING_ID = 'default';
 // App Store Connect の Product ID（non-consumable）
 export const BILLING_PRODUCT_ID = 'kodomo_kimochi_premium';
+export const BILLING_FALLBACK_PRICE_TEXT = '--';
 // RevenueCat / Store setup notes:
 // - entitlement: premium
 // - offering: default
 // - product: kodomo_kimochi_premium
 // - Display copy should use RevenueCat's localized price (fallback allowed).
+// - Expo Go ではネイティブ課金が使えないため configure が失敗しうる（開発ビルド / TestFlight で検証すること）。
 
 let initialized = false;
+/** 並行呼び出しで configure が二重実行されないようにする */
+let initPromise: Promise<void> | null = null;
+
+export type BillingDebugSnapshot = {
+  updatedAt: number;
+  offeringsAllKeys: string[];
+  offeringsCurrentId: string | null;
+  offeringPackagesProductIds: string[];
+  storeProductsCount: number | null;
+  hasGetOfferingsError: boolean;
+  getOfferingsErrorMessage: string | null;
+  hasGetPremiumPricingSafeError: boolean;
+  getPremiumPricingSafeErrorMessage: string | null;
+};
+
+let billingDebugSnapshot: BillingDebugSnapshot = {
+  updatedAt: Date.now(),
+  offeringsAllKeys: [],
+  offeringsCurrentId: null,
+  offeringPackagesProductIds: [],
+  storeProductsCount: null,
+  hasGetOfferingsError: false,
+  getOfferingsErrorMessage: null,
+  hasGetPremiumPricingSafeError: false,
+  getPremiumPricingSafeErrorMessage: null,
+};
+
+export function getBillingDebugSnapshot(): BillingDebugSnapshot {
+  return billingDebugSnapshot;
+}
 
 export type BillingErrorCode =
   | 'init_failed'
@@ -52,6 +84,7 @@ function isPremiumFromCustomerInfo(info: CustomerInfo): boolean {
 }
 
 function toBillingError(err: unknown, fallback: BillingErrorCode): BillingError {
+  if (err instanceof BillingError) return err;
   const purchasesErr = err as PurchasesError | undefined;
   const codeRaw = (purchasesErr as { code?: string | number } | undefined)?.code;
   const message = err instanceof Error ? err.message : 'Unknown billing error';
@@ -111,24 +144,42 @@ async function getPremiumOfferingAndPackage(): Promise<{
   offering: PurchasesOffering | null;
   pkg: PurchasesPackage | null;
 }> {
-  const offerings = await Purchases.getOfferings();
-
-  // 1) current offering 優先
-  if (offerings.current) {
-    const pkg = findPremiumPackage(offerings.current);
-    if (pkg) return { offering: offerings.current, pkg };
+  let offerings: Awaited<ReturnType<typeof Purchases.getOfferings>>;
+  try {
+    offerings = await Purchases.getOfferings();
+  } catch (error) {
+    console.error('GET_OFFERINGS_ERROR', error);
+    throw error;
   }
 
-  // 2) default offering フォールバック
-  const fallbackOffering = offerings.all[BILLING_OFFERING_ID] ?? null;
-  if (fallbackOffering) {
-    const pkg = findPremiumPackage(fallbackOffering);
-    if (pkg) return { offering: fallbackOffering, pkg };
+  // 1) current offering 優先 → 2) default offering → 3) all の先頭 offering（ID 不一致時の救済）
+  const fallbackOfferingById = offerings.all?.[BILLING_OFFERING_ID] ?? null;
+  const firstOfferingFromAll = (() => {
+    const all = offerings.all ?? {};
+    const firstKey = Object.keys(all)[0];
+    return firstKey ? all[firstKey] ?? null : null;
+  })();
+
+  const candidates: Array<{ label: string; offering: PurchasesOffering | null }> = [
+    { label: 'current', offering: offerings.current ?? null },
+    { label: `all.${BILLING_OFFERING_ID}`, offering: fallbackOfferingById },
+    { label: 'all.first', offering: firstOfferingFromAll },
+  ];
+
+  for (const c of candidates) {
+    const off = c.offering;
+    if (!off) continue;
+    const pkg = findPremiumPackage(off);
+    if (pkg) {
+      return { offering: off, pkg };
+    }
   }
 
-  // 見つからない
-  if (offerings.current) return { offering: offerings.current, pkg: null };
-  if (fallbackOffering) return { offering: fallbackOffering, pkg: null };
+  // 見つからない（Offerings 空 / Product ID 不一致 / RC 未設定など）
+  const anyOffering = offerings.current ?? fallbackOfferingById ?? firstOfferingFromAll;
+  if (anyOffering) {
+    return { offering: anyOffering, pkg: null };
+  }
   return { offering: null, pkg: null };
 }
 
@@ -145,7 +196,8 @@ export async function getPremiumPricingSafe(): Promise<PremiumPricingResult> {
       currentPackage: pkg,
       localizedPriceText: getLocalizedPriceTextFromPackage(pkg),
     };
-  } catch {
+  } catch (error) {
+    console.error('GET_PREMIUM_PRICING_SAFE_ERROR', error);
     return {
       currentOffering: null,
       currentPackage: null,
@@ -155,16 +207,25 @@ export async function getPremiumPricingSafe(): Promise<PremiumPricingResult> {
 }
 
 /**
- * RevenueCat setup (run once on app launch).
+ * RevenueCat setup（アプリ起動時に1回相当。並行呼び出しは同一 Promise に合流）。
+ * Expo SDK 54 + react-native-purchases 9.x では Purchases.configure({ apiKey }) で問題ない。
  */
 export async function initializeBilling(): Promise<void> {
   if (initialized) return;
-  try {
-    Purchases.configure({ apiKey: getPlatformApiKey() });
-    initialized = true;
-  } catch (err) {
-    throw toBillingError(err, 'init_failed');
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        Purchases.configure({ apiKey: getPlatformApiKey() });
+        initialized = true;
+      } catch (err) {
+        console.error('RC ERROR:', err);
+        throw toBillingError(err, 'init_failed');
+      } finally {
+        if (!initialized) initPromise = null;
+      }
+    })();
   }
+  await initPromise;
 }
 
 /**
@@ -176,6 +237,7 @@ export async function getCustomerPremiumStatus(): Promise<boolean> {
     const info = await Purchases.getCustomerInfo();
     return isPremiumFromCustomerInfo(info);
   } catch (err) {
+    console.error('RC ERROR:', err);
     throw toBillingError(err, 'unknown');
   }
 }
@@ -186,17 +248,15 @@ export async function getCustomerPremiumStatus(): Promise<boolean> {
 export async function purchasePremiumUnlock(): Promise<boolean> {
   await initializeBilling();
   try {
-    const { offering, pkg } = await getPremiumOfferingAndPackage();
-    const premiumPackage = pkg;
-    if (!premiumPackage) {
+    const { pkg } = await getPremiumOfferingAndPackage();
+    if (!pkg) {
       throw new BillingError('product_not_found', 'Premium product is not available in offerings.');
     }
-    const { customerInfo } = await Purchases.purchasePackage(premiumPackage);
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
     return isPremiumFromCustomerInfo(customerInfo);
   } catch (err) {
-    const mapped = toBillingError(err, 'purchase_failed');
-    if (mapped.code === 'user_cancelled') throw mapped;
-    throw mapped;
+    console.error('RC ERROR:', err);
+    throw toBillingError(err, 'purchase_failed');
   }
 }
 
@@ -209,6 +269,7 @@ export async function restorePremiumUnlock(): Promise<boolean> {
     const info = await Purchases.restorePurchases();
     return isPremiumFromCustomerInfo(info);
   } catch (err) {
+    console.error('RC ERROR:', err);
     throw toBillingError(err, 'restore_failed');
   }
 }

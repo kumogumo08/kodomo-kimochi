@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ChildProvider } from '@/contexts/ChildContext';
@@ -21,35 +22,37 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PremiumProvider>
-        <ChildProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen
-                name="(tabs)"
-                options={{
-                  headerShown: false,
-                  title: t('tabs.home'),
-                }}
-              />
+        <View style={{ flex: 1 }}>
+          <ChildProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen
+                  name="(tabs)"
+                  options={{
+                    headerShown: false,
+                    title: t('tabs.home'),
+                  }}
+                />
 
-              <Stack.Screen
-                name="emotion/[id]"
-                options={{
-                  title: '',
-                  headerBackButtonDisplayMode: 'minimal',
-                }}
-              />
-              <Stack.Screen
-                name="premium"
-                options={{
-                  headerBackButtonDisplayMode: 'minimal',
-                }}
-              />
-            </Stack>
+                <Stack.Screen
+                  name="emotion/[id]"
+                  options={{
+                    title: '',
+                    headerBackButtonDisplayMode: 'minimal',
+                  }}
+                />
+                <Stack.Screen
+                  name="premium"
+                  options={{
+                    headerBackButtonDisplayMode: 'minimal',
+                  }}
+                />
+              </Stack>
 
-            <StatusBar style="auto" />
-          </ThemeProvider>
-        </ChildProvider>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </ChildProvider>
+        </View>
       </PremiumProvider>
     </GestureHandlerRootView>
   );

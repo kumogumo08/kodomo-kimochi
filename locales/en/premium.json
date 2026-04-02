@@ -15,7 +15,7 @@
   "featureMemoBody": "Record what caused each emotion and discover patterns over time",
 
   "priceLoading": "Checking price...",
-  "priceUnavailable": "Could not load the price",
+  "priceUnavailable": "--",
   "priceNote": "Pay once and unlock all features forever",
 
   "buyButton": "Unlock Premium",

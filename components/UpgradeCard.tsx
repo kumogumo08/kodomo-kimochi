@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { usePremium } from '@/contexts/PremiumContext';
 
 const CARD_BG = '#FFF';
 const BORDER_COLOR = 'rgba(0,0,0,0.06)';
@@ -19,6 +18,9 @@ type UpgradeCardProps = {
   onPressPremium?: () => void;
 };
 
+/**
+ * 一覧・機能ブロック用のプレミアム案内（価格は表示しない。金額は /premium で確認）。
+ */
 export function UpgradeCard({
   featureName,
   description,
@@ -26,7 +28,6 @@ export function UpgradeCard({
 }: UpgradeCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
-  const { localizedPriceText, isLoadingPremium } = usePremium();
   const descriptionText = description ?? t('upgradeCard.defaultDescription');
   const handlePress = () => {
     if (onPressPremium) {
@@ -35,10 +36,6 @@ export function UpgradeCard({
       router.push('/premium');
     }
   };
-
-  const priceText = isLoadingPremium
-    ? t('upgradeCard.priceLoading')
-    : localizedPriceText ?? t('upgradeCard.priceUnavailable');
 
   return (
     <View style={styles.card}>
@@ -49,7 +46,6 @@ export function UpgradeCard({
         <Text style={styles.heading}>{t('upgradeCard.heading')}</Text>
       )}
       <Text style={styles.description}>{descriptionText}</Text>
-      <Text style={styles.price}>{priceText}</Text>
       <Pressable
         style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
         onPress={handlePress}
@@ -93,12 +89,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: MUTED_COLOR,
-    marginBottom: 16,
-  },
-  price: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: TITLE_COLOR,
     marginBottom: 16,
   },
   button: {

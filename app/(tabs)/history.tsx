@@ -183,10 +183,6 @@ export default function HistoryScreen() {
     setItems([]);
     try {
       const list = await getEmotionHistory({ childId: selectedChildId });
-      console.log('全履歴件数', list.length);
-      if (list.length > 0) {
-        console.log('最古データ', list[list.length - 1]);
-      }
       if (requestId === loadRequestIdRef.current) {
         setItems(list);
       }

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { usePremium } from '@/contexts/PremiumContext';
+import { BILLING_FALLBACK_PRICE_TEXT } from '@/services/billing';
 
 const SCREEN_BG = '#F5F5F5';
 const CARD_BG = '#FFF';
@@ -50,9 +51,10 @@ export default function PremiumScreen() {
     }
   };
 
-  const priceText = isLoadingPremium
-    ? t('premium.priceLoading')
-    : localizedPriceText ?? t('premium.priceUnavailable');
+  const priceText =
+    typeof localizedPriceText === 'string' && localizedPriceText.trim().length > 0
+      ? localizedPriceText
+      : BILLING_FALLBACK_PRICE_TEXT;
 
   return (
     <>

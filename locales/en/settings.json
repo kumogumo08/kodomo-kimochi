@@ -21,6 +21,11 @@
   "emotionReportBody": "Emotion reports help you see what feelings were chosen recently.\n\n・Feelings distribution\nSee which emotions were most common recently.\n\n・Daily records\nSee what feelings were selected each day.\n\n・Emotion categories\nLook at trends by grouping emotions.\n\nReports are not for judging children’s condition. They’re a simple way to understand recent emotion patterns.",
   "memoFeatureTitle": "About the Memo Feature",
   "memoFeatureBody": "The memo feature allows you to quickly record what caused each emotion when it is selected.\n\nWhen you look back at the history, you can understand what triggered strong emotions and notice patterns that happen repeatedly.\n\nThis helps you see things like when your child tends to get upset or what causes anxiety, making it easier to support them with the right words and responses.",
+  "legalSectionTitle": "Legal",
+  "terms": "Terms of Service",
+  "termsA11y": "Open Terms of Service",
+  "law": "Act on Specified Commercial Transactions",
+  "lawA11y": "Open Act on Specified Commercial Transactions",
   "emotionCategoriesTitle": "About emotion categories",
   "emotionCategoriesBody": "In this app, we group emotions like this.\n\nPositive group\nHappy\n\nAnger group\nAngry, Irritated\n\nSadness group\nSad, Lonely, Anxious\n\nThis is not a formal psychological diagnosis. It’s a simple way to make emotional trends easier to notice.",
   "notifications": {

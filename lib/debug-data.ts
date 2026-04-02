@@ -81,9 +81,6 @@ export async function generateDebugEmotionHistory(
 
   const existing = await AsyncStorage.getItem(DEBUG_FLAG_KEY);
   if (existing === '1') {
-    if (__DEV__) {
-      console.log('Debug history already generated. Skip.');
-    }
     return 0;
   }
 
@@ -104,7 +101,5 @@ export async function generateDebugEmotionHistory(
   await addEmotionHistoryBulk(all);
   await AsyncStorage.setItem(DEBUG_FLAG_KEY, '1');
 
-  const count = all.length;
-  console.log(`Generated debug history: ${count} items`);
-  return count;
+  return all.length;
 }
