@@ -2,6 +2,7 @@
   "title": "History",
   "swipeSwitchHint": "Swipe left or right to switch",
   "empty": "No history yet",
+  "loadError": "Could not load history. Please try again later.",
   "today": "Today",
   "pastTitle": "Past",
   "recentTitle": "Recent",

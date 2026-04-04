@@ -14,12 +14,20 @@ import { PanGestureHandler } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { TutorialOverlay } from '@/components/TutorialOverlay';
 import type { Emotion } from '@/constants/emotions';
 import { getEmotions } from '@/constants/emotions';
+import { TUTORIAL_MESSAGES, TUTORIAL_UI } from '@/constants/tutorial-content';
 import { ChildNameChips } from '@/components/ChildNameChips';
+import { useTutorial } from '@/contexts/TutorialContext';
 import { useChild } from '@/contexts/ChildContext';
 import { usePremium } from '@/contexts/PremiumContext';
 import { addEmotionToHistory } from '@/lib/emotion-history';
+
+/** 切り分け: true でカードの pressed スタイルを付けない */
+const DEBUG_HOME_EMOTION_CARD_NO_PRESSED_STYLE = false;
+/** true: 遷移を先にし、履歴保存は後（タッチ状態の引き継ぎ切り分け） */
+const HOME_PUSH_EMOTION_BEFORE_HISTORY = true;
 
 const SCREEN_BG = '#FFF8F0';
 const LABEL_COLOR = '#1a1a1a';
@@ -29,9 +37,12 @@ export default function HomeScreen() {
   const { effectivePremium } = usePremium();
   const { children, selectedChildId, selectedChild, selectChild, updateChildName } = useChild();
   const { t } = useTranslation();
+  const { ready, phase, advance, skip } = useTutorial();
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const emotionsForLang = getEmotions();
+
+  const showTutorialHome = ready && phase === 0;
 
   const selectedIndex = useMemo(
     () => children.findIndex((child) => child.id === selectedChildId),
@@ -61,24 +72,22 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <PanGestureHandler
-        enabled={effectivePremium && !editingName && children.length > 1}
+        enabled={effectivePremium && !editingName && children.length > 1 && !showTutorialHome}
         onEnded={async (event: any) => {
           await handleSwipe(event.nativeEvent.translationX);
         }}
-        // 縦スクロールとの干渉を抑える（横だけ動いたときに有効化）
         activeOffsetX={[-12, 12]}
         failOffsetY={[-10, 10]}>
         <View style={styles.gestureWrap}>
           <ScrollView
             style={styles.container}
             contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}>
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={!showTutorialHome}>
             <View style={styles.header}>
-            <View style={styles.subtitleWrap}>
-              <Text style={styles.subtitle}>
-                {t('home.subtitle')}
-              </Text>
-            </View>
+              <View style={styles.subtitleWrap}>
+                <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
+              </View>
 
               <ChildNameChips
                 childrenList={children}
@@ -95,20 +104,28 @@ export default function HomeScreen() {
                 <EmotionCard
                   key={emotion.id}
                   emotion={emotion}
-                  onPress={async () => {
-                    try {
-                      await addEmotionToHistory(
-                        {
-                          emotionId: emotion.id,
-                          label: emotion.label,
-                          selectedAt: new Date().toISOString(),
-                        },
-                        selectedChildId
-                      );
-                    } catch {
-                      // 保存に失敗しても詳細へ遷移する
+                  noPressedStyle={DEBUG_HOME_EMOTION_CARD_NO_PRESSED_STYLE}
+                  onPress={() => {
+                    const historyPayload = {
+                      emotionId: emotion.id,
+                      label: emotion.label,
+                      selectedAt: new Date().toISOString(),
+                    };
+                    if (HOME_PUSH_EMOTION_BEFORE_HISTORY) {
+                      router.push({ pathname: '/emotion/[id]', params: { id: emotion.id } });
+                      void addEmotionToHistory(historyPayload, selectedChildId).catch(() => {
+                        // 保存に失敗しても詳細は開いている
+                      });
+                    } else {
+                      void (async () => {
+                        try {
+                          await addEmotionToHistory(historyPayload, selectedChildId);
+                        } catch {
+                          // 保存に失敗しても詳細へ遷移する
+                        }
+                        router.push({ pathname: '/emotion/[id]', params: { id: emotion.id } });
+                      })();
                     }
-                    router.push({ pathname: '/emotion/[id]', params: { id: emotion.id } });
                   }}
                 />
               ))}
@@ -116,6 +133,14 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
       </PanGestureHandler>
+
+      <TutorialOverlay
+        visible={showTutorialHome}
+        message={TUTORIAL_MESSAGES[0]}
+        primaryLabel={TUTORIAL_UI.ok}
+        onPrimary={() => advance()}
+        onSkip={skip}
+      />
 
       <Modal
         transparent
@@ -158,16 +183,18 @@ export default function HomeScreen() {
 function EmotionCard({
   emotion,
   onPress,
+  noPressedStyle,
 }: {
   emotion: Emotion;
   onPress: () => void;
+  noPressedStyle?: boolean;
 }) {
   return (
     <Pressable
       style={({ pressed }) => [
         styles.card,
         { borderColor: emotion.bgColor },
-        pressed && styles.cardPressed,
+        !noPressedStyle && pressed && styles.cardPressed,
       ]}
       onPress={onPress}
       accessibilityRole="button"

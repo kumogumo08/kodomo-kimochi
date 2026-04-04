@@ -1,6 +1,7 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -14,8 +15,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ResearchNote } from '@/components/ResearchNote';
+import { TutorialOverlay } from '@/components/TutorialOverlay';
+import { EMOTION_HEADER_BACK } from '@/constants/emotion-header-back';
 import { getEmotionById } from '@/constants/emotions';
-import type { Emotion } from '@/constants/emotions';
+import { TUTORIAL_MESSAGES, TUTORIAL_UI } from '@/constants/tutorial-content';
+import { useTutorial } from '@/contexts/TutorialContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from 'react-i18next';
 
 const SCREEN_BG = '#FFF9F5';
@@ -25,6 +30,39 @@ const BODY_COLOR = '#333';
 const BORDER_COLOR = 'rgba(0,0,0,0.08)';
 const SUCCESS_BG = '#E8F5E9';
 
+/** 切り分け: true で詳細のチュートリアル Modal を出さない */
+const DEBUG_DISABLE_DETAIL_TUTORIAL_OVERLAY = false;
+/** false にすると React Navigation 標準の戻るボタン（切り分け用） */
+const USE_CUSTOM_EMOTION_HEADER_BACK = true;
+
+function EmotionDetailHeaderBack() {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const colorScheme = useColorScheme();
+  const colors = useMemo(
+    () => EMOTION_HEADER_BACK[colorScheme === 'dark' ? 'dark' : 'light'],
+    [colorScheme],
+  );
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('emotionDetail.back')}
+      onPress={() => router.back()}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      style={({ pressed }) => [
+        styles.emotionHeaderBackChip,
+        {
+          backgroundColor: pressed ? colors.pressedBackground : colors.background,
+          borderColor: colors.border,
+        },
+      ]}
+    >
+      <Text style={[styles.emotionHeaderBackLabel, { color: colors.label }]}>{t('emotionDetail.back')}</Text>
+    </Pressable>
+  );
+}
+
 function pickRandomSuccessMessage(list: string[], avoid?: string): string {
   if (list.length === 0) return '';
   if (!avoid || list.length === 1) return list[Math.floor(Math.random() * list.length)];
@@ -32,7 +70,7 @@ function pickRandomSuccessMessage(list: string[], avoid?: string): string {
   return others[Math.floor(Math.random() * others.length)] ?? list[0];
 }
 
-/** 紙吹雪パレット（七色＋バリエーションで密度・派手さ用） */
+/** 紙吹雪パレット（白系・パステルを足して自然な混ざりに） */
 const CONFETTI_COLORS = [
   '#FF3B30',
   '#FF6B6B',
@@ -48,10 +86,56 @@ const CONFETTI_COLORS = [
   '#5856D6',
   '#BF5AF2',
   '#FF2D55',
+  '#FFFFFF',
+  '#FFF8F5',
+  '#F5F5F7',
+  '#E8E8ED',
+  'rgba(255,255,255,0.88)',
 ];
 
-const CRACKER_PARTICLE_COUNT = 56;
+/**
+ * 紙吹雪チューニング（達成感・ひらひら感とパフォーマンスのバランス）
+ * - 数を上げすぎない（~80前後）／動きの質と長めの寿命を優先
+ */
+const CRACKER_PARTICLE_COUNT = 90;
+/** ボタン中心より上にずらして「少し上から舞う」 */
+const CRACKER_ORIGIN_Y_OFFSET_PX = 84;
+const DEG2RAD = Math.PI / 180;
+/** 合計時間のうち「上に飛ぶ」分は apexT で制御（数値は totalMs の比率用） */
+const CRACKER_RISE_MS = 180;
+const CRACKER_FALL_MS = 1620;
+const CRACKER_TOTAL_MS = CRACKER_RISE_MS + CRACKER_FALL_MS;
+/** 横：第1段を全体の約15%＝0.15〜0.25s相当で一気に拡散、2〜3段は小さな揺れ（合計 CRACKER_TOTAL_MS） */
+const CRACKER_X_PHASE_MS = [180, 700, 920] as const;
+/** 消え始めまで長め（合計 = CRACKER_TOTAL_MS で他トラックと同期） */
+const CRACKER_OPACITY_IN_MS = 48;
+const CRACKER_OPACITY_HOLD_MS = 1020;
+const CRACKER_OPACITY_OUT_MS = CRACKER_TOTAL_MS - CRACKER_OPACITY_IN_MS - CRACKER_OPACITY_HOLD_MS;
+
+/** 初速の3段階（発射の強弱） */
+const CRACKER_SPEED_GROUP = [1.02, 1.18, 1.42] as const;
+
 type CrackerOrigin = { x: number; y: number };
+
+/** Y は 0→1 の progress のみアニメし、translateY は interpolate で連続軌道（頂点で停止しない） */
+type ConfettiParticlePlan = {
+  totalMs: number;
+  msX0: number;
+  msX1: number;
+  msX2: number;
+  msOpIn: number;
+  msOpHold: number;
+  msOpOut: number;
+  dy: number;
+  gravity: number;
+  /** 軌道上の「最上点」に相当する正規化時間 0–1 */
+  apexT: number;
+  posX1: number;
+  posX2: number;
+  posX3: number;
+  /** 落下中も止まらず回る（1本の linear） */
+  rot: number;
+};
 
 type AccordionId = 'calm' | 'parent' | 'words';
 
@@ -59,7 +143,20 @@ export default function EmotionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
+  const { ready, phase, advance, skip, complete } = useTutorial();
   const emotion = id ? getEmotionById(id) : undefined;
+
+  const stackScreenOptions = useMemo(
+    () =>
+      USE_CUSTOM_EMOTION_HEADER_BACK
+        ? {
+            headerBackVisible: false as const,
+            headerLeft: () => <EmotionDetailHeaderBack />,
+          }
+        : {},
+    [],
+  );
+
   const successMessages = useMemo(
     () => t('emotionDetail.successMessages', { returnObjects: true }) as string[],
     [t],
@@ -105,7 +202,7 @@ export default function EmotionDetailScreen() {
     lastSuccessMessageRef.current = picked;
     setCurrentSuccessMessage(picked);
     const apply = (x: number, y: number) => {
-      setCrackerOrigin({ x, y });
+      setCrackerOrigin({ x, y: y - CRACKER_ORIGIN_Y_OFFSET_PX });
       setCrackerTick((t) => t + 1);
       setDidComplete(true);
     };
@@ -114,7 +211,7 @@ export default function EmotionDetailScreen() {
       ref.measureInWindow((wx, wy, w, h) => apply(wx + w / 2, wy + h / 2));
     } else {
       const { width, height } = Dimensions.get('window');
-      apply(width / 2, height * 0.5);
+      apply(width / 2, height * 0.46);
     }
   };
 
@@ -131,7 +228,7 @@ export default function EmotionDetailScreen() {
       Animated.timing(celebrationOpacity, {
         toValue: 1,
         duration: 320,
-        easing: Easing.out(Easing.quad),
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(celebrationScale, {
@@ -143,10 +240,86 @@ export default function EmotionDetailScreen() {
     ]).start();
   }, [didComplete, celebrationOpacity, celebrationScale]);
 
+  const confettiPlan = useMemo((): ConfettiParticlePlan[] | null => {
+    if (!crackerOrigin || crackerTick === 0) return null;
+    const xPhaseSum = CRACKER_X_PHASE_MS[0] + CRACKER_X_PHASE_MS[1] + CRACKER_X_PHASE_MS[2];
+    const plans: ConfettiParticlePlan[] = [];
+
+    for (let i = 0; i < CRACKER_PARTICLE_COUNT; i++) {
+      const speedGroup = CRACKER_SPEED_GROUP[i % CRACKER_SPEED_GROUP.length];
+      const tMul = 0.86 + Math.random() * 0.24;
+      const fallVar = 0.82 + Math.random() * 0.36;
+      const riseMs = CRACKER_RISE_MS * tMul;
+      const fallMs = CRACKER_FALL_MS * tMul * fallVar;
+      const totalMs = riseMs + fallMs;
+
+      const msX0 = Math.round((CRACKER_X_PHASE_MS[0] / xPhaseSum) * totalMs);
+      const msX1 = Math.round((CRACKER_X_PHASE_MS[1] / xPhaseSum) * totalMs);
+      const msX2 = Math.max(0, Math.round(totalMs - msX0 - msX1));
+      const msOpIn = Math.round((CRACKER_OPACITY_IN_MS / CRACKER_TOTAL_MS) * totalMs);
+      const msOpHold = Math.round((CRACKER_OPACITY_HOLD_MS / CRACKER_TOTAL_MS) * totalMs);
+      const msOpOut = Math.max(0, Math.round(totalMs - msOpIn - msOpHold));
+
+      const angle = (-128 + Math.random() * 76) * DEG2RAD;
+      const speed = (240 + Math.random() * 240) * speedGroup;
+      const wind = (Math.random() - 0.5) * 205;
+      const dx = Math.cos(angle) * speed + wind;
+      const dy = Math.sin(angle) * speed * 1.12;
+      const gravity = (168 + Math.random() * 188) * (0.94 + speedGroup * 0.05);
+
+      const spinDir = Math.random() < 0.5 ? -1 : 1;
+      const spinAmt = 0.85 + Math.random() * 0.75;
+      const rot = (Math.random() - 0.5) * 680 * spinAmt * spinDir;
+
+      const sway = (Math.random() - 0.5) * 125;
+      /** 第1段：ほぼ最終拡散まで一気に（バン！） */
+      const burstX = dx * (0.55 + Math.random() * 0.18) + sway * 0.55;
+      const posX1 = burstX;
+      /** 2〜3段：落下中の小さな左右揺れ（大きくは動かさない） */
+      const wobble = 20 + Math.random() * 36;
+      const posX2 = burstX + (Math.random() - 0.5) * wobble * 2;
+      const posX3 = burstX + (Math.random() - 0.5) * wobble * 1.85;
+
+      /**
+       * 軌道の山までの正規化時間を短く（≈0.15〜0.25s / totalMs）→「ふわっと上がる」時間を削る
+       */
+      const apexT = 0.075 + Math.random() * 0.065;
+
+      plans.push({
+        totalMs,
+        msX0,
+        msX1,
+        msX2,
+        msOpIn,
+        msOpHold,
+        msOpOut,
+        dy,
+        gravity,
+        apexT,
+        posX1,
+        posX2,
+        posX3,
+        rot,
+      });
+    }
+    return plans;
+  }, [crackerOrigin, crackerTick]);
+
   useEffect(() => {
-    if (!crackerOrigin || crackerTick === 0) return;
-    const COUNT = CRACKER_PARTICLE_COUNT;
+    if (!confettiPlan || !crackerOrigin) return;
     const particles = crackerParticles;
+
+    const stopAllParticleValues = () => {
+      for (let i = 0; i < CRACKER_PARTICLE_COUNT; i++) {
+        const p = particles[i];
+        p.x.stopAnimation();
+        p.y.stopAnimation();
+        p.r.stopAnimation();
+        p.o.stopAnimation();
+      }
+    };
+
+    stopAllParticleValues();
 
     particles.forEach((p) => {
       p.x.setValue(0);
@@ -155,72 +328,125 @@ export default function EmotionDetailScreen() {
       p.o.setValue(1);
     });
 
-    const anims: Animated.CompositeAnimation[] = [];
-    for (let i = 0; i < COUNT; i++) {
+    const anims = confettiPlan.map((plan, i) => {
       const p = particles[i];
-      const angle = ((-140 + Math.random() * 100) * Math.PI) / 180;
-      const speed = 140 + Math.random() * 140;
-      const wind = (Math.random() - 0.5) * 40;
-      const dx = Math.cos(angle) * speed + wind;
-      const dy = Math.sin(angle) * speed;
-      const gravity = 220 + Math.random() * 220;
-      const rot = Math.random() * 360 - 180;
-
-      anims.push(
-        Animated.parallel([
+      return Animated.parallel([
+        Animated.sequence([
           Animated.timing(p.x, {
-            toValue: dx,
-            duration: 900,
+            toValue: plan.posX1,
+            duration: plan.msX0,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(p.x, {
+            toValue: plan.posX2,
+            duration: plan.msX1,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(p.x, {
+            toValue: plan.posX3,
+            duration: plan.msX2,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(p.y, {
+          toValue: 1,
+          duration: plan.totalMs,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(p.r, {
+          toValue: plan.rot,
+          duration: plan.totalMs,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.sequence([
+          Animated.timing(p.o, { toValue: 1, duration: plan.msOpIn, useNativeDriver: true }),
+          Animated.timing(p.o, { toValue: 1, duration: plan.msOpHold, useNativeDriver: true }),
+          Animated.timing(p.o, {
+            toValue: 0,
+            duration: plan.msOpOut,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }),
-          Animated.sequence([
-            Animated.timing(p.y, {
-              toValue: dy,
-              duration: 360,
-              easing: Easing.out(Easing.quad),
-              useNativeDriver: true,
-            }),
-            Animated.timing(p.y, {
-              toValue: dy + gravity,
-              duration: 540,
-              easing: Easing.in(Easing.quad),
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.timing(p.r, {
-            toValue: rot,
-            duration: 900,
-            useNativeDriver: true,
-          }),
-          Animated.sequence([
-            Animated.timing(p.o, { toValue: 1, duration: 40, useNativeDriver: true }),
-            Animated.timing(p.o, {
-              toValue: 0,
-              duration: 420,
-              delay: 520,
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      );
+        ]),
+      ]);
+    });
+
+    /**
+     * 外側の Animated.parallel(90) を避ける。
+     * 親 composite の stop が子を再帰停止し、ネイティブ側でスタックオーバーフローになる事例があるため、
+     * 粒子ごとに個別 start する。
+     */
+    anims.forEach((anim) => anim.start());
+
+    return () => {
+      stopAllParticleValues();
+    };
+  }, [confettiPlan, crackerOrigin]);
+
+  /** 詳細のチュートリアルは排他 1 ステップのみ（Modal 重複マウント防止） */
+  const detailTutorialStep = useMemo((): 1 | 2 | 3 | 4 | null => {
+    if (!ready) return null;
+    if (phase === 1 && !didComplete) return 1;
+    if (phase === 2 && !didComplete) return 2;
+    if (phase === 3 && didComplete) return 3;
+    if (phase === 4 && didComplete) return 4;
+    return null;
+  }, [ready, phase, didComplete]);
+
+  /**
+   * スタックが同じ画面インスタンスを再利用すると didComplete などが残り、
+   * 2 回目入場で phase と組み合わさって Overlay が再び有効になりヘッダーが塞がる。
+   * フォーカスを失うたび（戻る含む）ローカル状態をリセットする。
+   */
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setDidComplete(false);
+        setCrackerOrigin(null);
+        setCrackerTick(0);
+        setOpenSections(new Set());
+        setCurrentSuccessMessage(initialSuccessMessage);
+        lastSuccessMessageRef.current = initialSuccessMessage;
+        celebrationOpacity.setValue(0);
+        celebrationScale.setValue(0.9);
+      };
+    }, [id, initialSuccessMessage, celebrationOpacity, celebrationScale])
+  );
+
+  const handleFinalStart = async () => {
+    try {
+      await complete();
+    } catch (e) {
+      console.warn('[EmotionDetail] handleFinalStart: complete failed', e);
+    } finally {
+      onAgainPress();
+      router.back();
     }
-    Animated.parallel(anims).start();
-  }, [crackerOrigin, crackerTick, crackerParticles]);
+  };
 
   if (!emotion) {
     return (
-      <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <Text style={styles.errorText}>{t('emotionDetail.notFound')}</Text>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>{t('emotionDetail.back')}</Text>
-        </Pressable>
-      </SafeAreaView>
+      <>
+        <Stack.Screen options={stackScreenOptions} />
+        <SafeAreaView style={styles.container} edges={['left', 'right']}>
+          <Text style={styles.errorText}>{t('emotionDetail.notFound')}</Text>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>{t('emotionDetail.back')}</Text>
+          </Pressable>
+        </SafeAreaView>
+      </>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+    <>
+      <Stack.Screen options={stackScreenOptions} />
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
 
       <ScrollView
         style={styles.scroll}
@@ -320,19 +546,30 @@ export default function EmotionDetailScreen() {
       </ScrollView>
 
       {/* 紙吹雪はスクロールより前面（クラッカーがしっかり見える） */}
-      {crackerOrigin && (
+      {crackerOrigin && confettiPlan && (
         <View style={styles.crackerOverlay} pointerEvents="none">
           <View style={[styles.crackerOrigin, { left: crackerOrigin.x, top: crackerOrigin.y }]}>
             {crackerParticles.map((p, idx) => {
-              const rotate = p.r.interpolate({
-                inputRange: [-180, 180],
-                outputRange: ['-180deg', '180deg'],
+              const plan = confettiPlan[idx];
+              const translateY = p.y.interpolate({
+                inputRange: [0, plan.apexT, 1],
+                outputRange: [0, plan.dy, plan.dy + plan.gravity],
+                extrapolate: 'clamp',
               });
-              const isDot = idx % 5 === 0;
-              const sizeVar = idx % 4;
-              const w = isDot ? 4 + (sizeVar % 3) : 5 + (idx % 4);
-              const h = isDot ? 4 + (sizeVar % 3) : 10 + (idx % 8);
-              const color = CONFETTI_COLORS[idx % CONFETTI_COLORS.length];
+              const rotate = p.r.interpolate({
+                inputRange: [-680, 680],
+                outputRange: ['-680deg', '680deg'],
+              });
+              const mix = ((idx * 92837111) ^ (crackerTick * 7919)) >>> 0;
+              const uW = (mix % 55) / 100;
+              const uH = ((mix >>> 8) % 55) / 100;
+              const isDot = idx % 4 === 0;
+              const baseW = isDot ? 7 : 8;
+              const baseH = isDot ? 7 : 14;
+              const w = Math.max(3, Math.round(baseW * (0.72 + uW * 0.55)));
+              const h = Math.max(3, Math.round(baseH * (0.72 + uH * 0.52)));
+              const color =
+                CONFETTI_COLORS[(idx + (mix % 13) + (crackerTick % 5)) % CONFETTI_COLORS.length];
               return (
                 <Animated.View
                   key={idx}
@@ -346,7 +583,7 @@ export default function EmotionDetailScreen() {
                       opacity: p.o,
                       transform: [
                         { translateX: p.x },
-                        { translateY: p.y },
+                        { translateY },
                         { rotate },
                       ],
                     },
@@ -378,7 +615,21 @@ export default function EmotionDetailScreen() {
           </Pressable>
         </Animated.View>
       )}
+
+      {!DEBUG_DISABLE_DETAIL_TUTORIAL_OVERLAY && detailTutorialStep !== null ? (
+        <TutorialOverlay
+          visible
+          message={TUTORIAL_MESSAGES[detailTutorialStep]}
+          primaryLabel={detailTutorialStep === 4 ? TUTORIAL_UI.start : TUTORIAL_UI.ok}
+          onPrimary={() => {
+            if (detailTutorialStep === 4) void handleFinalStart();
+            else advance();
+          }}
+          onSkip={skip}
+        />
+      ) : null}
     </SafeAreaView>
+    </>
   );
 }
 
@@ -423,6 +674,20 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingVertical: 8,
+  },
+  /** カスタム headerLeft：ピル型チップ（色は EMOTION_HEADER_BACK 参照） */
+  emotionHeaderBackChip: {
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+    alignItems: 'center',
+    maxHeight: 36,
+  },
+  emotionHeaderBackLabel: {
+    fontSize: 17,
+    fontWeight: '600',
   },
   backBtn: {
     alignSelf: 'flex-start',

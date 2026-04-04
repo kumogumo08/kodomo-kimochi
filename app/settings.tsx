@@ -10,7 +10,9 @@ import { ChildSwitcher } from '@/components/ChildSwitcher';
 import { getEmotions } from '@/constants/emotions';
 import { useChild } from '@/contexts/ChildContext';
 import { usePremium } from '@/contexts/PremiumContext';
+import { useTutorial } from '@/contexts/TutorialContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { DEFAULT_CHILD_ID } from '@/lib/children';
 import { generateDummyEmotionHistoryOneYear } from '@/lib/emotion-history';
 import { changeLanguage } from '@/lib/i18n';
 import {
@@ -53,7 +55,8 @@ export default function SettingsScreen() {
     devPremiumOverride,
     setDevPremiumOverride,
   } = usePremium();
-  const { removeChild } = useChild();
+  const { removeChild, selectedChildId } = useChild();
+  const { resetForDev } = useTutorial();
   const { i18n, t } = useTranslation();
   const { t: tSettings } = useTranslation('settings');
   const currentLang: 'ja' | 'en' = i18n.language?.startsWith('en') ? 'en' : 'ja';
@@ -91,7 +94,10 @@ export default function SettingsScreen() {
 
   const handleGenerateDummyHistory = async () => {
     try {
-      const count = await generateDummyEmotionHistoryOneYear(getEmotions());
+      const count = await generateDummyEmotionHistoryOneYear(
+        getEmotions(),
+        selectedChildId || DEFAULT_CHILD_ID
+      );
       Alert.alert(
         t('settings.dummyHistory.generateTitle'),
         count > 0
@@ -636,6 +642,24 @@ export default function SettingsScreen() {
                   accessibilityLabel={t('settings.dummyHistory.addDummyHistoryA11y')}
                 >
                   <Text style={styles.devActionText}>{t('settings.dummyHistory.addDummyHistoryText')}</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.devActionsRow}>
+                <Pressable
+                  style={styles.devActionButton}
+                  onPress={() => {
+                    void (async () => {
+                      await resetForDev();
+                      router.replace('/(tabs)');
+                    })();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="開発用: チュートリアルを未完了に戻してホームへ"
+                >
+                  <Text style={styles.devActionText}>
+                    チュートリアル未完了に戻す（開発）
+                  </Text>
                 </Pressable>
               </View>
 

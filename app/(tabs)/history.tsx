@@ -211,7 +211,7 @@ export default function HistoryScreen() {
       })
       .catch(() => {
         if (!cancelled) {
-          setLoadError('読み込みに失敗しました。時間をおいて再度お試しください。');
+          setLoadError(tHist('loadError'));
           setLoading(false);
         }
       });
@@ -219,7 +219,7 @@ export default function HistoryScreen() {
     return () => {
       cancelled = true;
     };
-  }, [isFocused, load]);
+  }, [isFocused, load, tHist]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

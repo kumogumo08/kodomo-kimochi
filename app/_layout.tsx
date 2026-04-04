@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ChildProvider } from '@/contexts/ChildContext';
 import { PremiumProvider } from '@/contexts/PremiumContext';
+import { TutorialProvider } from '@/contexts/TutorialContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
@@ -22,37 +23,40 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PremiumProvider>
-        <View style={{ flex: 1 }}>
-          <ChildProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Stack>
-                <Stack.Screen
-                  name="(tabs)"
-                  options={{
-                    headerShown: false,
-                    title: t('tabs.home'),
-                  }}
-                />
+        <TutorialProvider>
+          <View style={{ flex: 1 }}>
+            <ChildProvider>
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{
+                      headerShown: false,
+                      title: t('tabs.home'),
+                    }}
+                  />
 
-                <Stack.Screen
-                  name="emotion/[id]"
-                  options={{
-                    title: '',
-                    headerBackButtonDisplayMode: 'minimal',
-                  }}
-                />
-                <Stack.Screen
-                  name="premium"
-                  options={{
-                    headerBackButtonDisplayMode: 'minimal',
-                  }}
-                />
-              </Stack>
+                  <Stack.Screen
+                    name="emotion/[id]"
+                    options={{
+                      title: '',
+                      headerBackButtonDisplayMode: 'minimal',
+                    }}
+                  />
+                  <Stack.Screen
+                    name="premium"
+                    options={{
+                      headerBackButtonDisplayMode: 'minimal',
+                    }}
+                  />
+                </Stack>
 
-              <StatusBar style="auto" />
-            </ThemeProvider>
-          </ChildProvider>
-        </View>
+                <StatusBar style="auto" />
+              </ThemeProvider>
+            </ChildProvider>
+          </View>
+        </TutorialProvider>
       </PremiumProvider>
     </GestureHandlerRootView>
   );

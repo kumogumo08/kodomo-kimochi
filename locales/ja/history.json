@@ -2,6 +2,7 @@
   "title": "履歴",
   "swipeSwitchHint": "左右にスワイプで切り替え",
   "empty": "まだ履歴はありません",
+  "loadError": "読み込みに失敗しました。時間をおいて再度お試しください。",
   "today": "今日",
   "pastTitle": "過去",
   "recentTitle": "最近",
